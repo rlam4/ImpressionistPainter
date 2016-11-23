@@ -25,6 +25,7 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.util.UUID;
 
 public class MainActivity extends AppCompatActivity implements OnMenuItemClickListener {
 
@@ -85,6 +86,13 @@ public class MainActivity extends AppCompatActivity implements OnMenuItemClickLi
         popupMenu.show();
     }
 
+    public void onButtonClickSetSettingsBrush(View v) {
+        PopupMenu popupMenu = new PopupMenu(this, v);
+        popupMenu.setOnMenuItemClickListener(this);
+        popupMenu.inflate(R.menu.popup_menu_settings);
+        popupMenu.show();
+    }
+
     public boolean onMenuItemClick(MenuItem item) {
         switch (item.getItemId()) {
             case R.id.menuCircle:
@@ -107,10 +115,64 @@ public class MainActivity extends AppCompatActivity implements OnMenuItemClickLi
                 Toast.makeText(this, "Line Splatter Brush", Toast.LENGTH_SHORT).show();
                 _impressionistView.setBrushType(BrushType.LineSplatter);
                 return true;
+            case R.id.menuDynamic:
+                if(_impressionistView.mDynamicWidth) {
+                    Toast.makeText(this, "Dynamic mode deactivated", Toast.LENGTH_SHORT).show();
+                } else {
+                    Toast.makeText(this, "Dynamic mode activated", Toast.LENGTH_SHORT).show();
+                }
+                _impressionistView.toggleDynamicWidth();
+                return true;
+            case R.id.menuStroke:
+                if(_impressionistView.mStrokeMode) {
+                    Toast.makeText(this, "Brush is now in fill mode", Toast.LENGTH_SHORT).show();
+                } else {
+                    Toast.makeText(this, "Brush is now in stroke mode", Toast.LENGTH_SHORT).show();
+                }
+
+                _impressionistView.toggleMode();
+                return true;
         }
         return false;
     }
 
+    //Taken from my Doodle with some modifications.
+    public void onButtonClickSave(View v) {
+        //Check permissions
+
+
+        AlertDialog.Builder saveDialog = new AlertDialog.Builder(MainActivity.this);
+        saveDialog.setTitle("Save drawing to gallery");
+        saveDialog.setMessage("Would you like to save your drawing to device Gallery?");
+
+        AlertDialog.Builder builder = saveDialog.setPositiveButton("YES", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+
+                //This part of the saving process is mainly taken from class.
+                FileUtils.verifyStoragePermissions(MainActivity.this);
+
+                boolean checkStorage = FileUtils.checkPermissionToWriteToExternalStorage(MainActivity.this);
+                String filename = "Image-"+System.currentTimeMillis()+".jpg";
+
+                File file = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES), filename);
+                try {
+                    boolean compressSucceeded = _impressionistView.getBitmap().compress(Bitmap.CompressFormat.PNG, 100, new FileOutputStream(file));
+                    FileUtils.addImageToGallery(file.getAbsolutePath(), getApplicationContext());
+                    Toast.makeText(getApplicationContext(), "Saved to " + file.getAbsolutePath(), Toast.LENGTH_SHORT).show();
+                } catch (FileNotFoundException e) {
+                    e.printStackTrace();
+                }
+            }
+        });
+        saveDialog.setNegativeButton("NO", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                //Don't do anything
+            }
+        });
+        saveDialog.show();
+    }
 
     /**
      * Downloads test images to use in the assignment. Feel free to use any images you want. I only made this
@@ -185,6 +247,20 @@ public class MainActivity extends AppCompatActivity implements OnMenuItemClickLi
      * @param resultCode
      * @param data
      */
+
+    public void onButtonClickApplyVelocity() {
+
+        if(_impressionistView.mDynamicWidth) {
+            Toast.makeText(this, "Dynamic Width disabled.", Toast.LENGTH_SHORT).show();
+        } else {
+            Toast.makeText(this, "Dynamic Width enabled.", Toast.LENGTH_SHORT).show();
+        }
+
+        _impressionistView.toggleDynamicWidth();
+
+    }
+
+
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);

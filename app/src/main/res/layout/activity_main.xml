@@ -15,7 +15,10 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:orientation="vertical"
-        android:weightSum="2">
+        android:weightSum="2"
+        android:layout_alignParentTop="true"
+        android:layout_alignParentLeft="true"
+        android:layout_alignParentStart="true">
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -49,23 +52,38 @@
             <Button
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Download Images"
+                android:text="Download"
                 android:id="@+id/buttonDownloadImages"
                 android:onClick="onButtonClickDownloadImages"/>
 
             <Button
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Load Image"
+                android:text="Load"
                 android:id="@+id/buttonLoadImage"
                 android:onClick="onButtonClickLoadImage"/>
 
             <Button
+                android:text="Save"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Brush"
+                android:id="@+id/saveButton"
+                android:layout_weight="1"
+                android:onClick="onButtonClickSave" />
+
+            <Button
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Brush Type"
                 android:id="@+id/buttonBrush"
                 android:onClick="onButtonClickSetBrush"/>
+
+            <Button
+                android:text="Brush Settings"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:id="@+id/brushSettingsButton"
+                android:onClick="onButtonClickSetSettingsBrush" />
 
             <Button
                 android:layout_width="wrap_content"

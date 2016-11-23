@@ -14,15 +14,13 @@ import android.graphics.drawable.Drawable;
 import android.util.AttributeSet;
 import android.util.Log;
 import android.view.MotionEvent;
+import android.view.VelocityTracker;
 import android.view.View;
 import android.widget.ImageView;
 
 import java.text.MessageFormat;
 import java.util.Random;
 
-/**
- * Created by jon on 3/20/2016.
- */
 public class ImpressionistView extends View {
 
     private ImageView _imageView;
@@ -39,6 +37,12 @@ public class ImpressionistView extends View {
     private Paint _paintBorder = new Paint();
     private BrushType _brushType = BrushType.Square;
     private float _minBrushRadius = 5;
+
+    private VelocityTracker mVelocityTracker = null;
+
+    Boolean mDynamicWidth = false;
+    Boolean mStrokeMode = true;
+    Boolean mFillMode = false;
 
     public ImpressionistView(Context context) {
         super(context);
@@ -130,34 +134,122 @@ public class ImpressionistView extends View {
     }
 
     @Override
-    public boolean onTouchEvent(MotionEvent motionEvent){
+    public boolean onTouchEvent(MotionEvent motionEvent) {
 
         //Basically, the way this works is to liste for Touch Down and Touch Move events and determine where those
         //touch locations correspond to the bitmap in the ImageView. You can then grab info about the bitmap--like the pixel color--
         //at that location
-        float touchX = motionEvent.getX();
-        float touchY = motionEvent.getY();
 
-        switch(motionEvent.getAction()) {
-            case MotionEvent.ACTION_MOVE:
-                int color = getColor(touchX, touchY);
-                if(color == -1) {
+
+        //Multi-touch functionality is generated thorugh this forloop
+        //Got the idea from https://developer.android.com/training/gestures/multi.html
+        for (int p = 0; p < motionEvent.getPointerCount(); p++) {
+
+            //Each p denotes a different touchX/touchY
+            float touchX = motionEvent.getX(p);
+            float touchY = motionEvent.getY(p);
+
+            int color = 0;
+            int historySize = motionEvent.getHistorySize();
+
+            switch (motionEvent.getAction()) {
+                case MotionEvent.ACTION_MOVE:
+                    mVelocityTracker.addMovement(motionEvent);
+                    float velocity = _defaultRadius;
+
+                    if (mDynamicWidth) {
+                        mVelocityTracker.computeCurrentVelocity(10);
+                        velocity = (float) Math.sqrt(Math.pow(mVelocityTracker.getXVelocity(), 2)
+                                + Math.pow(mVelocityTracker.getYVelocity(), 2));
+                    }
+
+                    for (int i = 0; i < historySize; i++) {
+                        float histX = motionEvent.getHistoricalX(i);
+                        float histY = motionEvent.getHistoricalY(i);
+
+                        color = getColor(motionEvent.getHistoricalX(i), motionEvent.getHistoricalY(i));
+                        _paint.setColor(color);
+                        _paint.setAlpha(_alpha);
+
+                        colorShape(motionEvent.getHistoricalX(i), motionEvent.getHistoricalY(i), velocity);
+                    }
+
+                    color = getColor(touchX, touchY);
+                    if (color == -1) {
+                        break;
+                    }
+
+                    _paint.setColor(color);
+                    _paint.setAlpha(_alpha);
+                    colorShape(touchX, touchY, velocity);
+
                     break;
-                }
-                _paint.setColor(color);
-                _paint.setAlpha(_alpha);
-                _offScreenCanvas.drawCircle(touchX, touchY, 20, _paint);
-                break;
-            case MotionEvent.ACTION_DOWN:
-                break;
-            case MotionEvent.ACTION_UP:
-                break;
+                case MotionEvent.ACTION_DOWN:
+                    if (mVelocityTracker == null) {
+                        mVelocityTracker = VelocityTracker.obtain();
+                    } else {
+                        mVelocityTracker.clear();
+                    }
 
+                    mVelocityTracker.addMovement(motionEvent);
+                    color = getColor(touchX, touchY);
+
+                    if (color == -1) {
+                        break;
+                    }
+                    _paint.setColor(color);
+                    _paint.setAlpha(_alpha);
+
+                    colorShape(touchX, touchY, _defaultRadius);
+                    invalidate();
+
+                    break;
+                case MotionEvent.ACTION_UP:
+                    break;
+
+            }
+            invalidate();
         }
-        invalidate();
         return true;
     }
 
+    //Everything below here are helper methods.
+
+    public void toggleDynamicWidth() {
+        if(mDynamicWidth) {
+            mDynamicWidth = false;
+        } else {
+            mDynamicWidth = true;
+        }
+    }
+
+    public void toggleMode() {
+        if(mStrokeMode) {
+            mFillMode = true;
+            mStrokeMode = false;
+        } else if(mFillMode) {
+            mFillMode = false;
+            mStrokeMode = true;
+        }
+    }
+
+
+    private void colorShape(float touchX, float touchY, float velocity){
+        switch(_brushType) {
+            case Square:
+                _offScreenCanvas.drawRect(touchX - velocity, touchY - velocity,
+                        touchX + velocity, touchY + velocity, _paint);
+                break;
+            case Circle:
+                _offScreenCanvas.drawCircle(touchX, touchY, velocity, _paint);
+                break;
+            case Line:
+                _offScreenCanvas.drawLine(touchX - velocity, touchY - velocity,
+                        touchX + velocity, touchY + velocity, _paint);
+                break;
+
+        }
+    }
 
     private int getColor(float x, float y) {
         if(_imageView == null || _imageView.getDrawable() == null) {
@@ -191,6 +283,11 @@ public class ImpressionistView extends View {
      * @param imageView
      * @return
      */
+
+    public Bitmap getBitmap() {
+        return _offScreenBitmap;
+    }
+
     private static Rect getBitmapPositionInsideImageView(ImageView imageView){
         Rect rect = new Rect();
 
